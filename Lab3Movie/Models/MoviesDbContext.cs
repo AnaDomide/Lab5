@@ -22,7 +22,15 @@ namespace Lab3Movie.Models
                .HasOne(m => m.Movie)
                .WithMany(c => c.Comments)
                .OnDelete(DeleteBehavior.Cascade);
+
+            //cascade pt delete
+            builder.Entity<Movie>()
+           .HasOne(e => e.Owner)
+           .WithMany(c => c.Movies)
+           .OnDelete(DeleteBehavior.Cascade);
         }
+
+
 
         public DbSet<Movie> Movies { get; set; }
         public DbSet<Comment> Comments { get; set; }

@@ -106,7 +106,7 @@ namespace Lab3Movie.Controllers
             //context.Movies.Add(movie);
             //context.SaveChanges();
             // NEXT TIME: folosirea permisiunilor.
-            User addedBy = usersService.GetCurrentUser(HttpContext);
+            User addedBy = usersService.GetCurentUser(HttpContext);
             //if (addedBy.UserRole == UserRole.UserManager)
             //{
             //    return Forbid();
@@ -124,7 +124,7 @@ namespace Lab3Movie.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         // PUT: api/Movies/5
-        [Authorize]
+        [Authorize(Roles = "Admin,Regular")]
         [HttpPut("{id}")]
         public IActionResult Put(int id, [FromBody] Movie movie)
         {
@@ -152,7 +152,7 @@ namespace Lab3Movie.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         // DELETE: api/ApiWithActions/5
-        [Authorize]
+        [Authorize(Roles = "Admin,Regular")]
         [HttpDelete("{id}")]
         public IActionResult Delete(int id)
         {
