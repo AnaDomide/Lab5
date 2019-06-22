@@ -4,14 +4,16 @@ using Lab3Movie.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Lab3Movie.Migrations
 {
     [DbContext(typeof(MoviesDbContext))]
-    partial class MoviesDbContextModelSnapshot : ModelSnapshot
+    [Migration("20190620124303_AddUserUserRole")]
+    partial class AddUserUserRole
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -92,8 +94,6 @@ namespace Lab3Movie.Migrations
                     b.Property<string>("Password");
 
                     b.Property<string>("Username");
-
-                    b.Property<bool>("isRemoved");
 
                     b.HasKey("Id");
 

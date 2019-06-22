@@ -15,79 +15,69 @@ namespace Lab3Movie.Controllers
     [ApiController]
     public class CommentsController : ControllerBase
     {
-        private ICommentService commentsService;
-        private IUsersService usersService;
+        private ICommentService commentService;
 
-        public CommentsController(ICommentService commentsService, IUsersService usersService)
+        public CommentsController(ICommentService commentService)
         {
-            this.commentsService = commentsService;
-            this.usersService = usersService;
+            this.commentService = commentService;
         }
-
+        ///<remarks>
+        ///{
+        ///"id": 1,
+        ///"text": "Expensive?!",
+        ///"important": true
+        ///}
+        ///</remarks>
         /// <summary>
-        /// Get all comments.
+        /// 
         /// </summary>
-        /// <param name="filterString">Optional, filter by text</param>
-        /// <param name="page">Page</param>
+        /// <param name="filter">Optional, filtered by text</param>
+        /// <param name="page"></param>
         /// <returns>List of comments</returns>
 
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         // GET: api/Comments
         [HttpGet]
-        public PaginatedList<CommentGetModel> Get([FromQuery]string filterString, [FromQuery]int page = 1)
+        public PaginatedList<CommentGetModel> Get([FromQuery]string filter, int page = 1)
         {
             page = Math.Max(page, 1);
-            return commentsService.GetAll(page, filterString);
+            return commentService.GetAll(page, filter);
         }
 
 
-        [HttpGet("{id}")]
-        [Authorize(Roles = "Admin,Regular")]
-        public IActionResult Get(int id)
-        {
-            var found = commentsService.GetById(id);
-            if (found == null)
-            {
-                return NotFound();
-            }
+        // PUT: api/Comments/5
 
-            return Ok(found);
-        }
+        /// <summary>
+        /// update the comment with the specified id
+        /// </summary>
+        /// <param name="id">the id of the comment we want to update</param>
+        /// <param name="comment">a comment that contains the new data</param>
+        /// <returns>a comment object</returns>
+        //[HttpPut("{id}")]
+        //public IActionResult Put(int id, [FromBody] Comment comment)
+        //{
+        //    var result = commentService.Upsert(id, comment);
+        //    return Ok(result);
+        //}
 
-        [HttpPost]
-        [Authorize(Roles = "Admin,Regular")]
-        [ProducesResponseType(201)]
-        [ProducesResponseType(400)]
-        public void Post([FromBody] CommentPostModel comment)
-        {
-            User addedBy = usersService.GetCurentUser(HttpContext);
-            commentsService.Create(comment, addedBy);
-        }
+        // DELETE: api/ApiWithActions/5
+        /// <summary>
+        /// Delete the comment with the specified id
+        /// </summary>
+        /// <param name="id">The id of the comment we want to delete</param>
+        /// <returns>a comment object</returns>
+        //[HttpDelete("{id}")]
+        //public IActionResult Delete(int id)
+        //{
+        //    var existing = commentService.Delete(id);
+        //    if (existing == null)
+        //    {
+        //        return NotFound();
+        //    }
 
-        [Authorize(Roles = "Admin,Regular")]
-        [HttpPut("{id}")]
-        public IActionResult Put(int id, [FromBody] Comment comment)
-        {
-            var result = commentsService.Upsert(id, comment);
-            return Ok(result);
-        }
-
-        [ProducesResponseType(200)]
-        [ProducesResponseType(404)]
-        [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin,Regular")]
-        public IActionResult Delete(int id)
-        {
-            var result = commentsService.Delete(id);
-            if (result == null)
-            {
-                return NotFound();
-            }
-
-            return Ok(result);
-        }
-
-
+        //    return Ok(existing);
+        //}
     }
+
 }

@@ -94,7 +94,8 @@ namespace Lab3Movie.Controllers
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         // POST: api/Movies
-        [Authorize(Roles = "Admin,Regular")]
+      //  [Authorize(Roles = "Admin,Regular")]
+      
         [HttpPost]
 
         public void Post([FromBody] MoviePostModel movie)

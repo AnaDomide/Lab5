@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Lab3Movie.Models;
 using Lab3Movie.Services;
+using Lab3Movie.Validators;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -96,6 +97,10 @@ namespace Lab3Movie
             services.AddScoped<IMovieService, MovieService>();
             services.AddScoped<ICommentService, CommentService>();
             services.AddScoped<IUsersService, UsersService>();
+            services.AddScoped<IRegisterValidator, RegisterValidator>();
+            services.AddScoped<IUserRoleValidator, UserRoleValidator>();
+            services.AddScoped<IUserRoleService, UserRoleService>();
+            services.AddScoped<IUserUserRoleService, UserUserRoleService>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

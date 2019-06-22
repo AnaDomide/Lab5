@@ -10,14 +10,10 @@ namespace Lab3Movie.Services
 {
     public interface ICommentService
     {
-        PaginatedList<CommentGetModel> GetAll(int page, string filterString);
-        Comment Create(CommentPostModel task, User addedBy);
-
-        Comment Upsert(int id, Comment comment);
-
-        Comment Delete(int id);
-
+        PaginatedList<CommentGetModel> GetAll(int page, string filter);
         Comment GetById(int id);
+        Comment Create(CommentPostModel expense, int id);
+        Comment Delete(int id);
     }
     public class CommentService : ICommentService
     {
@@ -27,17 +23,19 @@ namespace Lab3Movie.Services
             this.context = context;
         }
 
-        public PaginatedList<CommentGetModel> GetAll(int page, string filterString)
+        public PaginatedList<CommentGetModel> GetAll(int page, string filter)
         {
             IQueryable<Comment> result = context
                 .Comments
-                .Where(c => string.IsNullOrEmpty(filterString) || c.Text.Contains(filterString))
+                .Where(c => string.IsNullOrEmpty(filter) || c.Text.Contains(filter))
                 .OrderBy(c => c.Id)
                 .Include(c => c.Movie);
-            var paginatedResult = new PaginatedList<CommentGetModel>();
-            paginatedResult.CurrentPage = page;
+            var paginatedResult = new PaginatedList<CommentGetModel>
+            {
+                CurrentPage = page,
 
-            paginatedResult.NumberOfPages = (result.Count() - 1) / PaginatedList<CommentGetModel>.EntriesPerPage + 1;
+                NumberOfPages = (result.Count() - 1) / PaginatedList<CommentGetModel>.EntriesPerPage + 1
+            };
             result = result
                 .Skip((page - 1) * PaginatedList<CommentGetModel>.EntriesPerPage)
                 .Take(PaginatedList<CommentGetModel>.EntriesPerPage);
@@ -45,15 +43,37 @@ namespace Lab3Movie.Services
 
             return paginatedResult;
         }
-
-        public Comment Create(CommentPostModel comment, User addedBy)
+        public Comment Create(CommentPostModel comment, int id)
         {
-            Comment commentAdd = CommentPostModel.ToComment(comment);
-            commentAdd.Owner = addedBy;
-            context.Comments.Add(commentAdd);
+            Comment toAdd = CommentPostModel.ToComment(comment);
+            Movie movie = context.Movies.FirstOrDefault(e => e.Id == id);
+            movie.Comments.Add(toAdd);
             context.SaveChanges();
-            return commentAdd;
+            return toAdd;
+
+
         }
+        public Comment GetById(int id)
+        {
+            return context.Comments
+                .FirstOrDefault(c => c.Id == id);
+        }
+
+        //public Comment Upsert(int id, Comment expense)
+        //{
+        //    var existing = context.Comment.AsNoTracking().FirstOrDefault(c => c.Id == id);
+        //    if (existing == null)
+        //    {
+        //        context.Comment.Add(expense);
+        //        context.SaveChanges();
+        //        return expense;
+        //    }
+        //    expense.Id = id;
+        //    context.Comment.Update(expense);
+        //    context.SaveChanges();
+        //    return expense;
+        //}
+
 
         public Comment Delete(int id)
         {
@@ -67,28 +87,5 @@ namespace Lab3Movie.Services
             return existing;
         }
 
-        public Comment GetById(int id)
-        {
-            return context.Comments.FirstOrDefault(c => c.Id == id);
-        }
-
-        public Comment Upsert(int id, Comment comment)
-        {
-            var existing = context.Comments.AsNoTracking().FirstOrDefault(c => c.Id == id);
-            if (existing == null)
-            {
-                context.Comments.Add(comment);
-                context.SaveChanges();
-                return comment;
-
-            }
-
-            comment.Id = id;
-            context.Comments.Update(comment);
-            context.SaveChanges();
-            return comment;
-        }
     }
-
 }
-

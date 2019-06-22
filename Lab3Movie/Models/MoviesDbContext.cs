@@ -24,10 +24,10 @@ namespace Lab3Movie.Models
                .OnDelete(DeleteBehavior.Cascade);
 
             //cascade pt delete
-            builder.Entity<Movie>()
-           .HasOne(e => e.Owner)
-           .WithMany(c => c.Movies)
-           .OnDelete(DeleteBehavior.Cascade);
+           // builder.Entity<Movie>()
+           //.HasOne(e => e.Owner)
+           //.WithMany(c => c.Movies)
+           //.OnDelete(DeleteBehavior.Cascade);
         }
 
 
@@ -35,5 +35,7 @@ namespace Lab3Movie.Models
         public DbSet<Movie> Movies { get; set; }
         public DbSet<Comment> Comments { get; set; }
         public DbSet<User> Users { get; set; }
+        public DbSet<UserRole> UserRole { get; set; }
+        public DbSet<UserUserRole> UserUserRole { get; set; }
     }
 }

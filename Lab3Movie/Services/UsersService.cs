@@ -1,4 +1,6 @@
-﻿using Lab3Movie.Models;
+﻿using Lab3Movie.Constants;
+using Lab3Movie.Models;
+using Lab3Movie.Validators;
 using Lab3Movie.ViewModels;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -18,12 +20,13 @@ namespace Lab3Movie.Services
     public interface IUsersService
     {
         LoginGetModel Authenticate(string username, string password);
-        LoginGetModel Register(RegisterPostModel registerinfo);
+        ErrorsCollection Register(RegisterPostModel registerinfo);
         User GetCurentUser(HttpContext httpContext);
+        UserRole GetCurrentUserRole(User user);
 
         IEnumerable<UserGetModel> GetAll();
         UserGetModel GetById(int id);
-        UserGetModel Create(UserPostModel userModel);
+        ErrorsCollection Create(RegisterPostModel userModel);
         UserGetModel Upsert(int id, UserPostModel userPostModel);
         UserGetModel Delete(int id);
     }
@@ -31,24 +34,34 @@ namespace Lab3Movie.Services
     public class UsersService : IUsersService
     {
         private MoviesDbContext context;
-
         private readonly AppSettings appSettings;
+        private IRegisterValidator registerValidator;
 
-        public UsersService(MoviesDbContext context, IOptions<AppSettings> appSettings)
+        private IUserUserRoleService userUserRolesService;
+
+        public UsersService(MoviesDbContext context,
+            IRegisterValidator registerValidator,
+            IUserUserRoleService userUserRolesService,
+            IOptions<AppSettings> appSettings)
         {
             this.context = context;
             this.appSettings = appSettings.Value;
+            this.registerValidator = registerValidator;
+            this.userUserRolesService = userUserRolesService;
         }
 
 
         public LoginGetModel Authenticate(string username, string password)
         {
             var user = context.Users
+                .AsNoTracking()
                 .FirstOrDefault(u => u.Username == username && u.Password == ComputeSha256Hash(password));
 
             // return null if user not found
             if (user == null)
                 return null;
+
+            string userRoleName = userUserRolesService.GetUserRoleNameById(user.Id);
 
             // authentication successful so generate jwt token
             var tokenHandler = new JwtSecurityTokenHandler();
@@ -58,7 +71,7 @@ namespace Lab3Movie.Services
                 Subject = new ClaimsIdentity(new Claim[]
                 {
                     new Claim(ClaimTypes.Name, user.Username.ToString()),
-                    new Claim(ClaimTypes.Role, user.UserRole.ToString()),        //rolul vine ca string
+                    new Claim(ClaimTypes.Role, userRoleName),        //rolul vine ca string
                     new Claim(ClaimTypes.UserData, user.DataRegistered.ToString())        //DataRegistered vine ca string
                 }),
                 Expires = DateTime.UtcNow.AddDays(7),
@@ -70,7 +83,7 @@ namespace Lab3Movie.Services
             {
                 Id = user.Id,
                 Email = user.Email,
-                Username = user.Username,
+                UserName = user.Username,
                 Token = tokenHandler.WriteToken(token)
             };
 
@@ -99,30 +112,51 @@ namespace Lab3Movie.Services
         }
 
 
-        public LoginGetModel Register(RegisterPostModel registerinfo)
+        public ErrorsCollection Register(RegisterPostModel registerinfo)
         {
-            User existing = context.Users.FirstOrDefault(u => u.Username == registerinfo.Username);
-
-            if (existing != null)
+            var errors = registerValidator.Validate(registerinfo, context);
+            if (errors != null)
             {
-                return null;
+                return errors;
             }
-            context.Users.Add(new User
+
+            User toAdd = new User
             {
                 Email = registerinfo.Email,
                 LastName = registerinfo.LastName,
                 FirstName = registerinfo.FirstName,
                 Password = ComputeSha256Hash(registerinfo.Password),
-                Username = registerinfo.Username,
-                UserRole = UserRole.Regular,
-                DataRegistered = DateTime.Now
+                Username = registerinfo.UserName,
+                DataRegistered = DateTime.Now,
+                UserUserRole = new List<UserUserRole>()
+            };
 
+            //se atribuie rolul de Regular ca default
+            var regularRole = context
+                .UserRole
+                .FirstOrDefault(ur => ur.Name == UserRoles.Regular);
+
+            context.Users.Add(toAdd);
+            context.UserUserRole.Add(new UserUserRole
+            {
+                User = toAdd,
+                UserRole = regularRole,
+                StartTime = DateTime.Now,
+                EndTime = null
             });
-            context.SaveChanges();
-            return Authenticate(registerinfo.Username, registerinfo.Password);
 
+            context.SaveChanges();
+            return null;
         }
 
+
+        public UserRole GetCurrentUserRole(User user)
+        {
+            return user
+                .UserUserRole
+                .FirstOrDefault(userUserRole => userUserRole.EndTime == null)
+                .UserRole;
+        }
 
         public User GetCurentUser(HttpContext httpContext)
         {
@@ -130,7 +164,12 @@ namespace Lab3Movie.Services
             //string accountType = httpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.AuthenticationMethod).Value;
             //return _context.Users.FirstOrDefault(u => u.Username == username && u.AccountType.ToString() == accountType);
 
-            return context.Users.FirstOrDefault(u => u.Username == username);
+            User user = context
+                .Users
+                .Include(u => u.UserUserRole)
+                .FirstOrDefault(u => u.Username == username);
+
+            return user;
         }
 
 
@@ -151,33 +190,50 @@ namespace Lab3Movie.Services
             return UserGetModel.FromUser(user);
         }
 
-        public UserGetModel Create(UserPostModel userModel)
+        public ErrorsCollection Create(RegisterPostModel userPostModel)
         {
-            User toAdd = UserPostModel.ToUser(userModel);
+            var errors = registerValidator.Validate(userPostModel, context);
+            if (errors != null)
+            {
+                return errors;
+            }
+
+            User toAdd = RegisterPostModel.ToUser(userPostModel);
+
+            //se atribuie rolul de Regular ca default
+            var regularRole = context
+                .UserRole
+                .FirstOrDefault(ur => ur.Name == UserRoles.Regular);
 
             context.Users.Add(toAdd);
-            context.SaveChanges();
-            return UserGetModel.FromUser(toAdd);
 
+            context.UserUserRole.Add(new UserUserRole
+            {
+                User = toAdd,
+                UserRole = regularRole,
+                StartTime = DateTime.Now,
+                EndTime = null
+            });
+
+            context.SaveChanges();
+            return null;
         }
+
+
 
         public UserGetModel Upsert(int id, UserPostModel userPostModel)
         {
             var existing = context.Users.AsNoTracking().FirstOrDefault(u => u.Id == id);
             if (existing == null)
             {
-                //User UserAdd = User.ToUser(user);
-                userPostModel.Password = ComputeSha256Hash(userPostModel.Password);
                 User toAdd = UserPostModel.ToUser(userPostModel);
                 context.Users.Add(toAdd);
                 context.SaveChanges();
                 return UserGetModel.FromUser(toAdd);
             }
 
-            //User UserUp = User.ToUser(user);
+            //context.Entry(existing).State = EntityState.Detached;
 
-
-            userPostModel.Password = ComputeSha256Hash(userPostModel.Password);
             User toUpdate = UserPostModel.ToUser(userPostModel);
             toUpdate.Id = id;
             context.Users.Update(toUpdate);
@@ -188,7 +244,8 @@ namespace Lab3Movie.Services
 
         public UserGetModel Delete(int id)
         {
-            var existing = context.Users.FirstOrDefault(u => u.Id == id);
+            var existing = context.Users
+                .FirstOrDefault(u => u.Id == id);
             if (existing == null)
             {
                 return null;
@@ -199,6 +256,9 @@ namespace Lab3Movie.Services
 
             return UserGetModel.FromUser(existing);
         }
+
+
+
 
     }
 }
