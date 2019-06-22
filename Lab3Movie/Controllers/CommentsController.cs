@@ -17,6 +17,7 @@ namespace Lab3Movie.Controllers
     {
         private ICommentService commentService;
 
+
         public CommentsController(ICommentService commentService)
         {
             this.commentService = commentService;
